@@ -1,5 +1,4 @@
-// @flow
-import React from 'react';
+import React, {useState} from 'react';
 import axios from 'axios';
 import { StoryContainer } from './StoryContainer';
 import { LoadMoreButton } from '../LoadMoreButton';
@@ -17,47 +16,37 @@ export type State = {
   data: any,
 };
 
-export class BaseContainer extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    const { data, lastPage } = props;
-    this.state = {
-      page: 1,
-      lastPage: !!lastPage,
-      data,
-    };
-  }
+const BaseContainer = ({
+  container,
+  data: propData,
+  fetchUrl,
+  lastPage: propLastPage
+}: Props) => {
+  const [page, setPage] = useState(1);
+  const [fetchedData, setFetchedData] = useState(propData);
+  const [isLastPage, setIsLastPage] = useState(!!propLastPage)
 
-  onClick = () => {
-    const { page, data } = this.state;
-    const { fetchUrl } = this.props;
+  const onClick = () => {
     let url = new URL(`${window.location.origin + fetchUrl}`);
     url = `${url.origin}${url.pathname}.json?page=${page + 1}${
-      url.search ? `&${url.search.substring(1)}` : ''
-    }`;
+      url.search ? `&${url.search.substring(1)}` : ''}`;
     axios.get(url).then((response: any) => {
-      if (response.data) {
-        this.setState({
-          lastPage: response.data.lastPage,
-          page: page + 1,
-          data: data.concat(response.data.data),
-        });
+      if (response.data)  {
+        setIsLastPage(response.data.lastPage);
+        setPage(page + 1);
+        setFetchedData(data.concat(response.data.data));
       }
     });
   };
 
-  render() {
-    const { data, lastPage } = this.state;
-    const { container } = this.props;
-    switch (container) {
-      case 'StoryContainer':
-      default:
-        return (
-          <>
-            <StoryContainer data={data} />
-            {!lastPage && <LoadMoreButton onClick={this.onClick} />}
-          </>
-        );
-    }
-  }
-}
+  return (
+    <>
+      <StoryContainer data={fetchedData}/>
+      {!isLastPage && <LoadMoreButton onClick={onClick} />}
+    </>
+  );
+};
+
+export default ({container, data, fetchUrl, lastPage}: Props) =>  (
+  <BaseContainer container={container} data={data} fetchUrl={fetchUrl} lastPage={lastPage} />
+);
